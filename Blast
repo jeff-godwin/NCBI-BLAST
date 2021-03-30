@@ -1,0 +1,80 @@
+#!/bin/bash 
+
+set -eu
+
+# Asks user input for BLAST parameters
+read -p "Enter BLAST program (blastn/blastx/blastp) : " prog
+read -p "Enter E-value (recommended 1e-5) : " num
+
+# Removes duplicated based on query name (1st column in blast tabular output; Gives one BLAST hit per query sequence
+read -p "Filter BLAST results? [y/n] :" filter
+
+if [[ $filter == "y" || $filter == "n" ]] ;
+then
+	echo -e "\n"
+else
+	echo -e "Choose valid option for filtering"
+	exit 1
+fi
+ 
+read -p "Enter number of threads: " cores
+
+read -p "Enter query file : " query
+if [[ -e $query && -s $query ]] ;
+then
+	 echo -e "\nValid query file\n"
+else
+	echo -e "\nInvalid query file\n"
+	exit 1
+fi
+
+read -p "Enter database file : " database
+
+#Indexing of database if necessary. Proceeds with blast if index is already present 
+if [[ -e $database.psq || -e $database.nsq ]] ;
+then
+	echo -e "\nDatabase index exists, proceeding to BLAST\n"
+
+elif [[ -e $database && -s $database ]] ;
+then
+	echo -e "\nValid database file, proceeding to index\n"
+	if [[ $prog == "blastn" ]] ;
+	then
+		makeblastdb -in $database -dbtype nucl
+	elif [[ $prog == "blastx" || $prog == "blastp" ]] ;
+	then
+		makeblastdb -in $database -dbtype prot
+	else
+		echo -e "\nInvalid BLAST program\n"
+		exit 1
+	fi
+else
+	echo -e "Invalid database file\n"
+	exit 1
+fi
+
+#BLAST search
+if [[ $prog == "blastn" ]] ;
+then
+	echo -e "\nBLAST started\n"	
+	blastn -query $query -db $database -evalue $num -num_alignments 10 -out blast${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
+
+elif [[ $prog == "blastx" ]] ;
+then
+	echo -e "\nBLAST started\n"
+	blastx -query $query -db $database -evalue $num -num_alignments 10 -out blast${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
+
+else
+	echo -e "\nBLAST started\n"
+	blastp -query $query -db $database -evalue $num -num_alignments 10 -out blast${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
+fi
+
+## BLAST results are already sorted based on Bit-score, E-value and query coverage. This step removes duplicates giving one BLAST - hit per query
+if [[ $filter == "y" ]] ;
+then
+	echo -e "Filtering results\n"
+	awk '$13>=60 {print $1,$2,$3,$13}' ${prog}_output.txt | awk '!visited[$1]++ {print $1,$2}' > filtered_blast.txt
+	echo -e "BLAST completed\n"
+else
+	echo -e "BLAST completed\n"
+fi
