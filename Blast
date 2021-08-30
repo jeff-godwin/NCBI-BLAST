@@ -3,6 +3,7 @@
 set -eu
 
 # Asks user input for BLAST parameters
+echo -e "This pipeline assumes installation of NCBI blast+ 2.6.0 and higher and present in the global/source environment"
 read -p "Enter BLAST program (blastn/blastx/blastp) : " prog
 read -p "Enter E-value (recommended 1e-5) : " num
 
@@ -57,23 +58,23 @@ fi
 if [[ $prog == "blastn" ]] ;
 then
 	echo -e "\nBLAST started\n"	
-	blastn -query $query -db $database -evalue $num -num_alignments 10 -out blast${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
+	blastn -query $query -db $database -evalue $num -out ${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
 
 elif [[ $prog == "blastx" ]] ;
 then
 	echo -e "\nBLAST started\n"
-	blastx -query $query -db $database -evalue $num -num_alignments 10 -out blast${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
+	blastx -query $query -db $database -evalue $num -out ${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
 
 else
 	echo -e "\nBLAST started\n"
-	blastp -query $query -db $database -evalue $num -num_alignments 10 -out blast${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
+	blastp -query $query -db $database -evalue $num -out ${prog}_output.txt -outfmt "6 std qcovs" -num_threads $cores
 fi
 
 ## BLAST results are already sorted based on Bit-score, E-value and query coverage. This step removes duplicates giving one BLAST - hit per query
 if [[ $filter == "y" ]] ;
 then
 	echo -e "Filtering results\n"
-	awk '$13>=60 {print $1,$2,$3,$13}' ${prog}_output.txt | awk '!visited[$1]++ {print $1,$2}' > filtered_blast.txt
+	awk '$13>=50 {print $0}' ${prog}_output.txt | sort -k1,1 -k12,12nr -k3,3n > filtered_blast.txt
 	echo -e "BLAST completed\n"
 else
 	echo -e "BLAST completed\n"
