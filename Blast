@@ -74,7 +74,7 @@ fi
 if [[ $filter == "y" ]] ;
 then
 	echo -e "Filtering results\n"
-	awk '$13>=50 {print $0}' ${prog}_output.txt | sort -k1,1 -k12,12nr -k3,3n > filtered_blast.txt
+	awk '$13>=60&&$3>=40 {print $0}' ${prog}_output.txt | sort -k1,1 -k13,13nr -k3,3n > filtered_blast.txt
 	echo -e "BLAST completed\n"
 else
 	echo -e "BLAST completed\n"
